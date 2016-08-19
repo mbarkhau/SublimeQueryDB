@@ -1,0 +1,3 @@
+[
+    { "keys": ["alt+q"], "command": "query_db", "args": {"connection_id": "default"} }
+]

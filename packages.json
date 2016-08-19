@@ -1,0 +1,22 @@
+{
+    "schema_version": "0.1.0",
+    "packages": [
+        {
+            "name": "QueryDB",
+            "details": "https://github.com/mbarkhau/SublimeQueryDB",
+            "description": "Query PostgreSQL/MySQL/SQLite",
+            "homepage": "https://github.com/mbarkhau/SublimeQueryDB",
+            "author": "Manuel Barkhau",
+            "readme": "https://raw.github.com/mbarkhau/SublimeQueryDB/master/README.md",
+            "labels": ["sql", "database", "query"],
+            "releases": [
+                {
+                    "sublime_text": ">=3000",
+                    "version": "0.1.0",
+                    "url": "https://github.com/mbarkhau/SublimeQueryDB/archive/v0.1.0.zip",
+                    "date": "2016-09-01 00:00:00"
+                }
+            ]
+        }
+    ]
+}

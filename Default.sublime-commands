@@ -1,0 +1,6 @@
+[
+    {
+        "caption": "Run SQL Query",
+        "command": "query_db"
+    }
+]

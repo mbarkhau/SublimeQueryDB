@@ -1,4 +1,5 @@
 import io
+import re
 import time
 import threading
 import subprocess
@@ -7,11 +8,40 @@ import sublime
 import sublime_plugin
 
 
+# https://regex101.com/r/hO3eH6
+DB_URL_RE = re.compile(r"""
+^
+    (?P<connector>[^:]+)
+    ://
+    (?:
+        (?:
+            (?P<username>[^:@]+)
+            @
+            (?P<host>[^:/]+)
+            (?:
+                \:
+                (?P<port> \d+)
+            )?
+        )?
+        (?: (?P<database> \/ .+))
+    )
+$
+""", re.VERBOSE)
+
+
+def parse_credentials_url(url):
+    match = DB_URL_RE.match(url)
+    if match is None:
+        raise ValueError("Invalid URL for db connecion: '{}'".format(url))
+    return match.groupdict()
+
+
 class StatusUpdateThread(threading.Thread):
 
     def __init__(self):
         self.queries = []
         self.messages = {}  # message -> lifetime
+        self.status_linger = 2.0
         super(StatusUpdateThread, self).__init__()
 
     def status_id(self, thread):
@@ -21,21 +51,27 @@ class StatusUpdateThread(threading.Thread):
         thread.view.erase_status(self.status_id(thread))
 
     def update_status(self, thread):
+        totaltime = (thread.t2 or time.time()) - thread.t0
+        if totaltime < 1:
+            totaltime_str = "{:}ms".format(int(totaltime * 1000))
+        else:
+            totaltime_str = "{:.3f}s".format(totaltime)
         thread.view.set_status(self.status_id(thread), (
-            "[psql {:.2f}s read {}]"
-        ).format(time.time() - thread.t0, 0))
+            "[psql {:} read {}]"
+        ).format(totaltime_str, 0))
 
     def run(self):
         while True:
             if self.queries:
+                running_query_threads = []
                 for t in self.queries:
-                    if t.is_alive():
+                    is_alive = not t.t2 or (time.time() - t.t2) < self.status_linger
+                    if is_alive:
+                        running_query_threads.append(t)
                         self.update_status(t)
                     else:
                         self.erase_status(t)
-                self.queries = [
-                    t for t in self.queries if t.is_alive()
-                ]
+                self.queries = running_query_threads
 
             time.sleep(.07)
 
@@ -48,12 +84,12 @@ STATUS_UPDATE_THREAD.start()
 class QueryThread(threading.Thread):
 
     def __init__(self, query, window, view=None):
-        if not query.endswith(";"):
-            query += ";"
         self.query = query
         self.window = window
         self.view = view
         self.t0 = time.time()
+        self.t1 = None
+        self.t2 = None
         super(QueryThread, self).__init__()
 
     def run(self):
@@ -63,6 +99,8 @@ class QueryThread(threading.Thread):
         port = "5439"
         db = "ddm"
         host = "consul.nt.vc"
+        # db = "adm"
+        # host = "senator.nt.vc"
         # language = "sql"
 
         # config_path = "/tmp/.pgpass"
@@ -75,11 +113,13 @@ class QueryThread(threading.Thread):
 
         query_path = "/tmp/tmp_pgsql_query.sql"
         with io.open(query_path, encoding='utf-8', mode='w') as fh:
-            fh.write(self.query)
+            query = self.query
+            if not query.endswith(";"):
+                query += ";"
+            fh.write(query)
 
         out_path = "/tmp/tmp_pgsql_output_{}.txt".format(id(self))
 
-        t_first_bytes = 0
         self.proc = subprocess.Popen(
             [
                 "psql",
@@ -104,15 +144,15 @@ class QueryThread(threading.Thread):
         err_buffer = []
 
         stdout_value, stderr_value = self.proc.communicate()
+        t_first_bytes = time.time()
         out_buffer.append(stdout_value.decode('utf-8'))
         err_buffer.append(stderr_value.decode('utf-8'))
-        if (out_buffer or err_buffer) and not t_first_bytes:
-            t_first_bytes = time.time()
 
         ret_code = self.proc.wait()
 
-        if not t_first_bytes:
-            t_first_bytes = time.time()
+        # TODO (mb 2016-08-24): write to file and check st_mtime/st_size
+        #   rather than reading from stdout.
+        self.t1 = time.time()
 
         output = ""
         if ret_code == 0:
@@ -134,6 +174,8 @@ class QueryThread(threading.Thread):
                 "".join(err_buffer) + "\n" +
                 "-" * 48 + "\n"
             )
+
+        self.t2 = time.time()
 
         self.view.set_status("psql_running", "")
 
@@ -171,7 +213,12 @@ class QueryThread(threading.Thread):
 
 class QueryDbCommand(sublime_plugin.TextCommand):
 
-    def run(self, edit):
+    def run(self, edit, connection_id='default'):
+        settings = self.view.settings()
+        # print(settings.get('query_db_executables'))
+        # print(settings.get('query_db_connector_defaults'))
+        # print(settings.get('query_db_connection_urls'))
+        # print(settings.get('tab_size'))
         sels = self.view.sel()
         for sel in sels:
             sel_text = self.view.substr(sel)

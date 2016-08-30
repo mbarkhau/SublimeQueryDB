@@ -1,3 +1,9 @@
 [
-    { "keys": ["alt+q"], "command": "query_db", "args": {"connection_id": "default"} }
+    {
+        "keys": ["alt+shift+r"],
+        "command": "query_db",
+        "args": {
+            "connection_id": "default"
+        }
+    }
 ]

@@ -257,9 +257,16 @@ class QueryThread(threading.Thread):
 class QueryDbCommand(sublime_plugin.TextCommand):
 
     def get_settings(self):
+        executables = {}
+        urls = {}
+
         settings = self.view.settings()
-        executables = settings.get('query_db_executables').copy()
-        urls = settings.get('query_db_connection_urls').copy()
+        default_executables = settings.get('query_db_executables')
+        default_urls = settings.get('query_db_connection_urls')
+        if default_executables:
+            executables.update(default_executables)
+        if default_urls:
+            urls.update(default_urls)
 
         user_settings = sublime.load_settings("SublimeQueryDB.sublime-settings")
         user_executables = user_settings.get('query_db_executables')

@@ -1,0 +1,20 @@
+{
+    "query_db_executables": {
+        "psql"        : "/usr/bin/psql",
+        "sqlite3"     : "/usr/bin/sqlite3",
+        "bq"          : "/home/user/Downloads/google-cloud-sdk/bin/bq",
+        // "mysql"    : "/usr/bin/mysql",
+        // "cockroach": "/usr/bin/cockroach"
+    },
+    "query_db_connection_urls": {
+        // TODO (mb 2016-08-19): .pgpass
+        // TODO (mb 2016-08-19): .gcp
+        // "default": "{connector}://{user}@{host}:{port}/{db_path}"
+        // "default": "sqlite:///<builtin>/Chinook_Sqlite.sqlite",
+        // "bqproject": "bigquery://<auth_config>@<project>/dataset",
+        // Download from http://chinookdatabase.codeplex.com/releases/view/55681
+        // TODO (mb 2016-08-19): maybe create an example sqlite database
+        //      in the users home directory, set it as the default and
+        //      use it in the install.txt
+    }
+}

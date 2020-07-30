@@ -4,7 +4,7 @@
         {
             "name": "QueryDB",
             "details": "https://github.com/mbarkhau/SublimeQueryDB",
-            "description": "Query PostgreSQL/MySQL/SQLite",
+            "description": "Query PostgreSQL/SQLite/BigQuery",
             "homepage": "https://github.com/mbarkhau/SublimeQueryDB",
             "author": "Manuel Barkhau",
             "readme": "https://raw.github.com/mbarkhau/SublimeQueryDB/master/README.md",

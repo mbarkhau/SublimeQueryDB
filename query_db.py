@@ -7,12 +7,16 @@ from __future__ import unicode_literals
 import os
 import re
 import time
+import shutil
 import tempfile
 import threading
 import subprocess
 
 import sublime
 import sublime_plugin
+
+
+BQ_CMD = shutil.which("bq")
 
 
 PROGRESS = "⡇⣆⣰⢸⠹⠏"
@@ -103,7 +107,9 @@ class StatusUpdateThread(threading.Thread):
                         self.erase_status(t)
                 self.queries = running_query_threads
 
-            time.sleep(0.1)
+                time.sleep(0.1)
+            else:
+                time.sleep(0.5)
 
 
 STATUS_UPDATE_THREAD = StatusUpdateThread()
@@ -177,8 +183,8 @@ class QueryThread(threading.Thread):
                     env['PGCONNECT_TIMEOUT'] = "3"
                     shell = False
                 elif scheme in BIGQUERY_SCHEMES:
-                    bq_cmd = self.settings['executables']['bq']
-                    cmd = "cat {} | {} query --nouse_legacy_sql".format(fobj.name, bq_cmd)
+                    bq_cmd = self.settings['executables'].get('bq', BQ_CMD)
+                    cmd = "cat {} | {} query --nouse_legacy_sql --max_rows=10000".format(fobj.name, bq_cmd)
                     if db_connect_params['host']:
                         cmd += " --project_id=" + db_connect_params['host']
                     if db_connect_params['db']:
@@ -223,6 +229,9 @@ class QueryThread(threading.Thread):
             response_time_str = mk_time_str(response_time)
             total_time_str = mk_time_str(total_time)
 
+            out_text = "".join(out_buffer).rstrip()
+            err_text = "".join(err_buffer).rstrip()
+
             output = (
                 "-" * 20 + " QUERY " + "-" * 20 + "\n" +
                 self.query + "\n" +
@@ -232,13 +241,13 @@ class QueryThread(threading.Thread):
                     total_time * 1000, total_time_str,
                 ) +
                 "-" * 20 + " RESULT " + "-" * 20 + "\n" +
-                "".join(out_buffer).rstrip()
+                out_text
             )
 
-            if ret_code:
+            if ret_code or err_buffer:
                 output += (
                     "\n\nExit Code: " + str(ret_code) + "\n" +
-                    "".join(err_buffer) + "\n" +
+                    err_text + "\n" +
                     "-" * 48 + "\n"
                 )
 
